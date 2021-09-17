@@ -151,7 +151,7 @@ class WorkoutListViewController: UITableViewController, ListSectionObserver, Tab
     func listMonitor(_ monitor: ListMonitor<Workout>, didUpdateObject object: Workout, atIndexPath indexPath: IndexPath) {
         if let cell = self.tableView.cellForRow(at: indexPath) as? WorkoutListCell {
             cell.workout = object
-            cell.setup()
+            // cell.setup()
         }
     }
     

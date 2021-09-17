@@ -21,18 +21,17 @@
 import UIKit
 import MapKit
 import SnapKit
+import SwiftUI
 
 class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObserver {
     
-    let lineView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.accentColor.withAlphaComponent(0.25)
-        return view
-    }()
+    var workout: Workout
+    
+    lazy var lineView: UIView = WorkoutLineView()
     
     let circleView: UIView = {
         let view = UIView()
-        view.backgroundColor = .backgroundColor
+        view.backgroundColor = .foregroundColor
         view.layer.cornerRadius = 10
         view.layer.borderWidth = 4
         view.layer.borderColor = UIColor.accentColor.cgColor
@@ -41,41 +40,17 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
     
     lazy var headerView: UIView = WorkoutListHeader(dayIdentifier: workout.dayIdentifier.value)
     
-    lazy var containerView: UIView = {
+    lazy var cardView: UIView = {
         let view = UIView()
         view.backgroundColor = .foregroundColor
-        view.layer.cornerRadius = 25
+        view.layer.cornerRadius = 10
         view.clipsToBounds = true
         if self.workout.isRace.value {
-            view.layer.borderColor = UIColor.accentColor.withAlphaComponent(0.5).cgColor
+            view.layer.borderColor = UIColor.accentColor.withAlphaComponent(0.33).cgColor
             view.layer.borderWidth = 4
         }
         return view
     }()
-    
-    let infoView: UIView = {
-        let view = UIView()
-        view.clipsToBounds = true
-        return view
-    }()
-    
-    let typeLabel = UILabel(
-        textColor: .secondaryColor,
-        font: .systemFont(ofSize: 14, weight: .bold)
-    )
-    
-    let distanceLabel = UILabel(textColor: .primaryColor)
-    
-    let durationLabel = UILabel(textColor: .secondaryColor)
-    
-    let mapImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.backgroundColor = UIColor.backgroundColor.withAlphaComponent(0.5)
-        imageView.contentMode = UIView.ContentMode.scaleAspectFill
-        return imageView
-    }()
-    
-    var workout: Workout
 
     init(workout: Workout) {
         
@@ -88,7 +63,10 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
         self.addSubview(lineView)
         self.addSubview(circleView)
         self.addSubview(headerView)
-        self.addSubview(containerView)
+        self.addSubview(cardView)
+        
+        let cardUI = UIHostingController(rootView: WorkoutCard())
+        cardView.addSubview(cardUI.view)
         
         lineView.snp.makeConstraints { (make) in
             make.top.equalToSuperview()
@@ -97,7 +75,7 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
             make.width.equalTo(4)
         }
         circleView.snp.makeConstraints { (make) in
-            make.centerY.equalTo(containerView)
+            make.centerY.equalTo(cardView)
             make.centerX.equalTo(lineView.snp.centerX)
             make.height.equalTo(20)
             make.width.equalTo(20)
@@ -105,52 +83,15 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
         headerView.snp.makeConstraints { (make) in
             make.left.right.top.equalToSuperview()
         }
-        containerView.snp.makeConstraints { (make) in
+        cardView.snp.makeConstraints { (make) in
             make.top.equalTo(headerView.snp.bottom).offset(10)
             make.left.equalTo(lineView.snp.right).offset(18)
             make.right.equalToSuperview().offset(-10)
-            make.bottom.equalToSuperview().offset(-10)
+            make.bottom.equalToSuperview().offset(100)
         }
         
-        containerView.addSubview(infoView)
-        containerView.addSubview(mapImageView)
-        
-        infoView.snp.makeConstraints { (make) in
-            make.left.equalToSuperview().offset(20)
-            make.right.equalTo(mapImageView.snp.left).offset(20)
-            make.centerY.equalToSuperview()
-        }
-        mapImageView.snp.makeConstraints { (make) in
-            make.top.equalToSuperview()
-            make.right.equalToSuperview()
-            make.bottom.equalToSuperview()
-            make.height.equalTo(120)
-            make.width.equalTo(containerView.snp.width).dividedBy(2)
-        }
-        
-        infoView.addSubview(typeLabel)
-        infoView.addSubview(distanceLabel)
-        infoView.addSubview(durationLabel)
-        
-        typeLabel.snp.makeConstraints { (make) in
-            make.top.equalToSuperview()
-            make.left.equalToSuperview()
-            make.right.equalToSuperview()
-        }
-        distanceLabel.snp.makeConstraints { (make) in
-            make.top.equalTo(typeLabel.snp.bottom)
-            make.left.equalToSuperview()
-            make.right.equalToSuperview()
-        }
-        durationLabel.snp.makeConstraints { (make) in
-            make.top.equalTo(distanceLabel.snp.bottom)
-            make.left.equalToSuperview()
-            make.right.equalToSuperview()
-            make.bottom.equalToSuperview()
-            
-        }
-        
-        self.setup()
+        // containerView.addSubview(infoView)
+        self.loadLabels()
         self.startObservingApplicationState()
         
     }
@@ -159,17 +100,7 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
         fatalError()
     }
     
-    func setup() {
-        self.typeLabel.text = workout.type.description.uppercased()
-        
-        self.loadLabels()
-        
-        if workout.hasRouteData {
-            self.loadImage()
-        } else {
-            self.mapImageView.isHidden = true
-        }
-    }
+    /*
     
     func loadImage() {
         let request = WorkoutMapImageRequest(workoutUUID: workout.uuid.value, size: .list) { (success, image) in
@@ -181,26 +112,17 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
         }
         WorkoutMapImageManager.execute(request)
     }
+ */
     
     func loadLabels() {
         
+        /*
         let distanceMeasurement = NSMeasurement(doubleValue: workout.distance.value, unit: UnitLength.meters)
         let distanceString = CustomMeasurementFormatting.string(forMeasurement: distanceMeasurement, type: .distance, rounding: .wholeNumbers)
         let attributedDistanceString = WorkoutListCell.attributedStringWithBigNumbers(withString: distanceString, fontSize: 36)
         self.distanceLabel.attributedText = attributedDistanceString
+ */
         
-        let durationMeasurement = NSMeasurement(doubleValue: workout.activeDuration.value, unit: UnitDuration.seconds)
-        let timeString = CustomMeasurementFormatting.string(forMeasurement: durationMeasurement, type: .time, rounding: .wholeNumbers)
-        let attributedTimeString = WorkoutListCell.attributedStringWithBigNumbers(withString: timeString, fontSize: 24)
-        self.durationLabel.attributedText = attributedTimeString
-        
-    }
-    
-    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        let renderer = MKPolylineRenderer(overlay: overlay)
-        renderer.strokeColor = UIColor.accentColor
-        renderer.lineCap = .round
-        return renderer
     }
     
     private static func attributedStringWithBigNumbers(withString string: String, fontSize: CGFloat) -> NSAttributedString {
@@ -216,6 +138,7 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
         super.traitCollectionDidChange(previousTraitCollection)
         
         if #available(iOS 13.0, *) {
+            /*
             if previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? false {
                 self.circleView.layer.borderColor = UIColor.accentColor.cgColor
                 self.mapImageView.image = nil
@@ -224,12 +147,13 @@ class WorkoutListCell: UITableViewCell, MKMapViewDelegate, ApplicationStateObser
                     self.containerView.layer.borderColor = UIColor.accentColor.withAlphaComponent(0.5).cgColor
                 }
             }
+ */
         }
     }
     
     func didUpdateApplicationState(to state: ApplicationState) {
         if state == .foreground {
-            self.loadImage()
+            // self.loadImage()
         }
     }
     

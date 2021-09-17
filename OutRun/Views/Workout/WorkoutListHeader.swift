@@ -22,15 +22,11 @@ import UIKit
 
 class WorkoutListHeader: UIView {
     
-    let lineView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.accentColor.withAlphaComponent(0.25)
-        return view
-    }()
+    lazy var lineView: UIView = WorkoutLineView()
     
     let label = UILabel(
-        textColor: .secondaryColor,
-        font: .systemFont(ofSize: 16, weight: .bold)
+        textColor: .primaryColor,
+        font: .systemFont(ofSize: 16)
     )
 
     init(title: String) {
